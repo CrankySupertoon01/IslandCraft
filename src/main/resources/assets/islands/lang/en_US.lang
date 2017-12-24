@@ -1,2 +1,13 @@
 
 generator.islands=Islands
+
+islands.requestcomfirmed=Request Confirmed.
+islands.pconfirm=%s Confirmed your request.
+
+islands.requestcanceled=Request Denied.
+islands.pdeny=%s Denied your request.
+
+islands.move_to=Move request sent to %s
+islands.move_senttoyou=%s Sent move request to you. (His island will wipe if you accept)
+
+islands.island=This (closest to you) island belongs to %s

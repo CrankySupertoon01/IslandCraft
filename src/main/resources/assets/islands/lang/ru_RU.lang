@@ -1,2 +1,13 @@
 
-generator.islands=Islands
+generator.islands=Острова
+
+islands.requestcomfirmed=Запрос принят.
+islands.pconfirm=%s принял ваш запрос.
+
+islands.requestcanceled=Запрос отклонен.
+islands.pdeny=%s отклонил ваш запрос.
+
+islands.move_to=Запрос на переселение отправлен игроку %s
+islands.move_senttoyou=Был отправлен запрос на переселение от %s. (его остров пропадет если вы приймете запрос)
+
+islands.island=Этот (ближайший) остров пренадлежит игроку %s

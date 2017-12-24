@@ -47,7 +47,7 @@ public class CommandIC extends CommandBase
 	@Override
 	public String getUsage(ICommandSender sender)
 	{
-		return "/ic help";
+		return "/ic <move/get/reset/kick>";
 	}
 	
 	@Override

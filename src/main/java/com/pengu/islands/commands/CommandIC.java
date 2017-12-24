@@ -20,7 +20,6 @@ import com.pengu.islands.config.ConfigsIC;
 import com.pengu.islands.tasks.TaskDestroyIsland;
 import com.pengu.islands.world.Island;
 
-import net.minecraft.client.resources.I18n;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
@@ -31,6 +30,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.common.util.Constants.NBT;
 
@@ -127,8 +127,8 @@ public class CommandIC extends CommandBase
 					pending.remove(key);
 					EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(key);
 					
-					sender.sendMessage(new TextComponentString(TextFormatting.GREEN + I18n.format("islands.requestcomfirmed")));
-					player.sendMessage(new TextComponentString(TextFormatting.GREEN + I18n.format("islands.pconfirm", sender.getName())));
+					sender.sendMessage(new TextComponentTranslation("islands.requestcomfirmed"));
+					player.sendMessage(new TextComponentTranslation("islands.pconfirm", sender.getName()));
 					
 					IslandData id = IslandData.getDataFor(server.getWorld(ConfigsIC.islandDim));
 					
@@ -175,18 +175,20 @@ public class CommandIC extends CommandBase
 					String key = pending.getKey(sender.getName());
 					pending.remove(key);
 					
-					sender.sendMessage(new TextComponentString(TextFormatting.RED + I18n.format("islands.requestcanceled")));
+					sender.sendMessage(new TextComponentTranslation("islands.requestcanceled"));
 					EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(key);
-					player.sendMessage(new TextComponentString(TextFormatting.RED + I18n.format("islands.pdeny", sender.getName())));
+					player.sendMessage(new TextComponentTranslation("islands.pdeny", sender.getName()));
 				} else
 					throw new CommandException("You don't have pending requests.");
 			} else if(Arrays.asList(server.getPlayerList().getOnlinePlayerNames()).contains(args[1]))
 			{
+				if(args[1].equals(sender.getName()))
+					throw new CommandException("You can't send move request to yourself!");
 				if(!pending.containsKey(sender.getName()))
 				{
 					EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(args[1]);
-					sender.sendMessage(new TextComponentString(TextFormatting.GREEN + I18n.format("islands.move_to", player.getName())));
-					player.sendMessage(new TextComponentString(TextFormatting.YELLOW + I18n.format("islands.move_senttoyou", sender.getName())));
+					sender.sendMessage(new TextComponentTranslation("islands.move_to", player.getName()));
+					player.sendMessage(new TextComponentTranslation("islands.move_senttoyou", sender.getName()));
 					
 					pending.put(sender.getName(), player.getName());
 				} else
@@ -227,7 +229,7 @@ public class CommandIC extends CommandBase
 			}
 			
 			if(cp != null)
-				sender.sendMessage(new TextComponentString(I18n.format("islands.island", cp, dist)));
+				sender.sendMessage(new TextComponentTranslation("islands.island", cp, dist));
 		} else if(args[0].equals("reset"))
 		{
 			IslandData id = IslandData.getDataFor(server.getWorld(ConfigsIC.islandDim));

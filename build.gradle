@@ -27,7 +27,7 @@ configFile.withReader {
 
 version = "${config.mod_version}"
 group = "com.pengu.${config.mod_id}"
-archivesBaseName = "${config.mod_id_fancy}_${config.minecraft_version}"
+archivesBaseName = "${config.mod_id_fancy}-${config.minecraft_version}"
 
 sourceCompatibility = targetCompatibility = "1.8"
 compileJava {

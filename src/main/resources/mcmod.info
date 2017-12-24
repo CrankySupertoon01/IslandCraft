@@ -1,0 +1,14 @@
+[
+	{
+		"modid": "template",
+		"name": "Template Mod",
+		"description": "",
+		"version": "${version}",
+		"mcversion": "${mcversion}",
+		"url": "${mod_url}",
+		"authorList": [ "APengu" ],
+		"credits": "APengu for making this template",
+		"logoFile": "logo.png",
+		"dependencies": []
+	}
+]

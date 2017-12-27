@@ -14,24 +14,18 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants.NBT;
+import net.minecraftforge.fml.relauncher.Side;
 
 public class IslandData
 {
-	public static Map<Integer, IslandData> PERWORLD = new HashMap<>();
+	public static IslandData data;
 	
 	public IndexedMap<String, BlockPos> islands = new IndexedMap<>();
-	public final World world;
 	
-	public IslandData(World world)
+	public static IslandData getData()
 	{
-		this.world = world;
-	}
-	
-	public static IslandData getDataFor(World world)
-	{
-		IslandData data = PERWORLD.get(ConfigsIC.islandDim);
 		if(data == null)
-			PERWORLD.put(ConfigsIC.islandDim, data = new IslandData(world));
+			data = new IslandData();
 		return data;
 	}
 	
@@ -42,10 +36,16 @@ public class IslandData
 	
 	public BlockPos getIsland(String player)
 	{
+		BlockPos pos = getLocalIsland(player);
+		return new BlockPos(pos.getX() * ConfigsIC.islandDistance, ConfigsIC.islandY, pos.getZ() * ConfigsIC.islandDistance);
+	}
+	
+	public BlockPos getLocalIsland(String player)
+	{
 		BlockPos pos = islands.get(player);
 		if(pos == null)
 			islands.put(player, pos = getNextIsland());
-		return new BlockPos(pos.getX() * ConfigsIC.islandDistance, ConfigsIC.islandY, pos.getZ() * ConfigsIC.islandDistance);
+		return pos;
 	}
 	
 	public BlockPos getNextIsland()

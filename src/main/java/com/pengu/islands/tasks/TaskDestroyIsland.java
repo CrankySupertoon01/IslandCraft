@@ -21,6 +21,10 @@ public class TaskDestroyIsland implements iProcess
 	public List<BlockPos> broken = new ArrayList<>();
 	public int lastBroken;
 	
+	public Runnable onFinish = () ->
+	{
+	};
+	
 	public TaskDestroyIsland(WorldLocation start)
 	{
 		world = start.getWorld();
@@ -48,7 +52,7 @@ public class TaskDestroyIsland implements iProcess
 	
 	public void breakAround(BlockPos pos)
 	{
-		int r = 5;
+		int r = 12;
 		for(int x = -r; x <= r; ++x)
 			for(int y = -r; y <= r; ++y)
 				for(int z = -r; z <= r; ++z)
@@ -65,7 +69,7 @@ public class TaskDestroyIsland implements iProcess
 						
 						broken.add(t);
 						
-						AxisAlignedBB aabb = new AxisAlignedBB(t).expand(8, 8, 8);
+						AxisAlignedBB aabb = new AxisAlignedBB(t).grow(r);
 						
 						List<net.minecraft.entity.Entity> ents = world.getEntitiesWithinAABBExcludingEntity(null, aabb);
 						for(Entity ent : ents)
@@ -73,6 +77,12 @@ public class TaskDestroyIsland implements iProcess
 								ent.setDead();
 					}
 				}
+	}
+	
+	@Override
+	public void onKill()
+	{
+		onFinish.run();
 	}
 	
 	@Override

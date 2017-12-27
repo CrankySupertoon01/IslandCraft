@@ -27,47 +27,20 @@ public class PlayerEvents
 	@SubscribeEvent
 	public void playerJoin(PlayerLoggedInEvent e)
 	{
-		EntityPlayer p = e.player;
-		
-		if(p.world.getWorldType() == IslandCraft.islandWorldType && p.getServer() != null)
-		{
-			IslandData id = IslandData.getDataFor(p.getServer().getWorld(ConfigsIC.islandDim));
-			String name = p.getGameProfile().getName();
-			boolean first = !id.hasIsland(name);
-			BlockPos island = id.getIsland(name);
-			
-			if(first && p instanceof EntityPlayerMP)
-			{
-				File ics = new File("config", InfoIC.MOD_ID + File.separator + "island.ics");
-				
-				try(FileInputStream fis = new FileInputStream(ics))
-				{
-					NBTTagList list = CompressedStreamTools.readCompressed(fis).getTagList("data", NBT.TAG_COMPOUND);
-					
-					Island isl = new Island(list);
-					isl.build(new WorldLocation(p.getEntityWorld(), island));
-				} catch(Throwable err)
-				{
-					err.printStackTrace();
-				}
-				
-				double x, y, z;
-				((EntityPlayerMP) p).connection.setPlayerLocation(x = island.getX() + .5, y = p.world.getHeight(island).getY() + 2, z = island.getZ() + .5, 0, 0);
-				p.setPositionAndUpdate(x, y, z);
-				p.setSpawnPoint(p.world.getHeight(island), true);
-				p.fallDistance = 0;
-			}
-		}
+		homePlayer(e.player, true);
 	}
 	
 	@SubscribeEvent
 	public void playerRespawn(PlayerRespawnEvent e)
 	{
-		EntityPlayer p = e.player;
-		
+		homePlayer(e.player, false);
+	}
+	
+	public static void homePlayer(EntityPlayer p, boolean setSpawn)
+	{
 		if(p.world.getWorldType() == IslandCraft.islandWorldType && p.getServer() != null)
 		{
-			IslandData id = IslandData.getDataFor(p.getServer().getWorld(ConfigsIC.islandDim));
+			IslandData id = IslandData.getData();
 			String name = p.getGameProfile().getName();
 			boolean first = !id.hasIsland(name);
 			BlockPos island = id.getIsland(name);
@@ -91,8 +64,9 @@ public class PlayerEvents
 			if(p instanceof EntityPlayerMP)
 			{
 				double x, y, z;
-				((EntityPlayerMP) p).connection.setPlayerLocation(x = island.getX() + .5, y = p.world.getHeight(island).getY() + 2, z = island.getZ() + .5, 0, 0);
-				p.setPositionAndUpdate(x, y, z);
+				IslandCraft.teleportPlayer((EntityPlayerMP) p, x = island.getX() + .5, y = p.world.getHeight(island).getY() + 2, z = island.getZ() + .5, ConfigsIC.islandDim);
+				if(setSpawn)
+					p.setSpawnChunk(p.world.getHeight(island), false, ConfigsIC.islandDim);
 				p.fallDistance = 0;
 			}
 		}

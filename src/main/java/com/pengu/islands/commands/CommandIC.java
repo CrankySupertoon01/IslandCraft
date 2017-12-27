@@ -10,19 +10,23 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import com.pengu.hammercore.common.utils.XPUtil;
 import com.pengu.hammercore.utils.IndexedMap;
 import com.pengu.hammercore.utils.WorldLocation;
 import com.pengu.islands.InfoIC;
+import com.pengu.islands.IslandCraft;
 import com.pengu.islands.IslandData;
 import com.pengu.islands.config.ConfigsIC;
+import com.pengu.islands.events.PlayerEvents;
 import com.pengu.islands.tasks.TaskDestroyIsland;
 import com.pengu.islands.world.Island;
 
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
@@ -65,7 +69,7 @@ public class CommandIC extends CommandBase
 	@Override
 	public boolean checkPermission(MinecraftServer server, ICommandSender sender)
 	{
-		return !(sender instanceof MinecraftServer);
+		return sender instanceof EntityPlayer;
 	}
 	
 	@Override
@@ -73,6 +77,8 @@ public class CommandIC extends CommandBase
 	{
 		if(args.length == 0)
 			throw new CommandException("No arguments!");
+		
+		args[0] = args[0].toLowerCase();
 		
 		if(args[0].equals("export") && sender.canUseCommand(3, "ic"))
 		{
@@ -130,14 +136,14 @@ public class CommandIC extends CommandBase
 					sender.sendMessage(new TextComponentTranslation("islands.requestcomfirmed"));
 					player.sendMessage(new TextComponentTranslation("islands.pconfirm", sender.getName()));
 					
-					IslandData id = IslandData.getDataFor(server.getWorld(ConfigsIC.islandDim));
+					IslandData id = IslandData.getData();
 					
 					BlockPos target = id.getIsland(sender.getName());
 					BlockPos destroy = id.getIsland(player.getName());
 					
 					id.islands.put(player.getName(), id.islands.get(sender.getName()));
 					
-					TaskDestroyIsland task = new TaskDestroyIsland(new WorldLocation(id.world, destroy));
+					TaskDestroyIsland task = new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), destroy));
 					while(task.isAlive())
 						task.update();
 					
@@ -150,16 +156,16 @@ public class CommandIC extends CommandBase
 							NBTTagList list = CompressedStreamTools.readCompressed(fis).getTagList("data", NBT.TAG_COMPOUND);
 							
 							Island isl = new Island(list);
-							isl.build(new WorldLocation(id.world, target));
+							isl.build(new WorldLocation(server.getWorld(ConfigsIC.islandDim), target));
 						} catch(Throwable err)
 						{
 							err.printStackTrace();
 						}
 					}
 					
-					if(sender instanceof EntityPlayerMP)
+					if(player instanceof EntityPlayerMP)
 					{
-						EntityPlayerMP p = (EntityPlayerMP) sender;
+						EntityPlayerMP p = player;
 						double x, y, z;
 						p.connection.setPlayerLocation(x = target.getX() + .5, y = p.world.getHeight(target).getY() + 2, z = target.getZ() + .5, 0, 0);
 						p.setPositionAndUpdate(x, y, z);
@@ -201,15 +207,37 @@ public class CommandIC extends CommandBase
 			{
 				EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(args[1]);
 				
-				IslandData id = IslandData.getDataFor(server.getWorld(ConfigsIC.islandDim));
-				id.islands.remove(player.getGameProfile().getName());
+				IslandData id = IslandData.getData();
 				BlockPos pos = id.getIsland(player.getGameProfile().getName());
 				
+				String cp = null;
+				double dist = Double.POSITIVE_INFINITY;
+				
+				List<String> users = id.islands.getKeys();
+				for(int i = 0; i < users.size(); ++i)
+				{
+					BlockPos ppos = id.getIsland(users.get(i));
+					
+					double d = sender.getPosition().distanceSq(ppos);
+					
+					if(d < dist)
+					{
+						cp = users.get(i);
+						dist = d;
+					}
+				}
+				
+				if(cp.equals(player.getGameProfile().getName()))
+					throw new CommandException("You cannot kick the owner of the island.");
+				
+				id.islands.remove(player.getGameProfile().getName());
+				
+				PlayerEvents.homePlayer(player, true);
 			} else
 				throw new CommandException("Player not found!");
 		} else if(args[0].equals("get"))
 		{
-			IslandData id = IslandData.getDataFor(server.getWorld(ConfigsIC.islandDim));
+			IslandData id = IslandData.getData();
 			
 			String cp = null;
 			double dist = Double.POSITIVE_INFINITY;
@@ -221,7 +249,7 @@ public class CommandIC extends CommandBase
 				
 				double d = sender.getPosition().distanceSq(pos);
 				
-				if(d <= dist)
+				if(d < dist)
 				{
 					cp = users.get(i);
 					dist = d;
@@ -232,43 +260,87 @@ public class CommandIC extends CommandBase
 				sender.sendMessage(new TextComponentTranslation("islands.island", cp, dist));
 		} else if(args[0].equals("reset"))
 		{
-			IslandData id = IslandData.getDataFor(server.getWorld(ConfigsIC.islandDim));
+			IslandData id = IslandData.getData();
+			
+			if(!id.hasIsland(sender.getName()))
+				throw new CommandException("You don't own an island!");
+			
+			BlockPos local = id.getLocalIsland(sender.getName());
+			
+			List<String> users = id.islands.getKeys();
+			users.removeIf(u -> !Objects.equals(id.islands.get(u), local));
+			
+			if(users.size() > 1)
+				throw new CommandException("You have allies on your island; you can not reset the island.");
 			
 			BlockPos target = id.getIsland(sender.getName());
 			
 			sender.sendMessage(new TextComponentString("Resetting..."));
-			TaskDestroyIsland task = new TaskDestroyIsland(new WorldLocation(id.world, target));
-			while(task.isAlive())
-				task.update();
-			sender.sendMessage(new TextComponentString("Building..."));
+			TaskDestroyIsland task = new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), target));
 			
-			File ics = new File("config", InfoIC.MOD_ID + File.separator + "island.ics");
-			
-			try(FileInputStream fis = new FileInputStream(ics))
+			task.onFinish = () ->
 			{
-				NBTTagList list = CompressedStreamTools.readCompressed(fis).getTagList("data", NBT.TAG_COMPOUND);
+				sender.sendMessage(new TextComponentString("Building..."));
 				
-				Island isl = new Island(list);
-				isl.build(new WorldLocation(id.world, target));
-			} catch(Throwable err)
-			{
-				err.printStackTrace();
-			}
+				File ics = new File("config", InfoIC.MOD_ID + File.separator + "island.ics");
+				
+				try(FileInputStream fis = new FileInputStream(ics))
+				{
+					NBTTagList list = CompressedStreamTools.readCompressed(fis).getTagList("data", NBT.TAG_COMPOUND);
+					
+					Island isl = new Island(list);
+					isl.build(new WorldLocation(server.getWorld(ConfigsIC.islandDim), target));
+				} catch(Throwable err)
+				{
+					err.printStackTrace();
+				}
+				
+				if(sender instanceof EntityPlayerMP)
+				{
+					EntityPlayerMP p = (EntityPlayerMP) sender;
+					double x, y, z;
+					p.connection.setPlayerLocation(x = target.getX() + .5, y = p.world.getHeight(target).getY() + 2, z = target.getZ() + .5, 0, 0);
+					p.setPositionAndUpdate(x, y, z);
+					p.setSpawnPoint(p.world.getHeight(target), true);
+					p.fallDistance = 0;
+					p.inventory.clear();
+					p.setHealth(20F);
+					p.getFoodStats().setFoodLevel(20);
+					p.getFoodStats().setFoodSaturationLevel(2);
+					XPUtil.setPlayersExpTo(p, 0);
+				}
+			};
 			
+			task.start();
+		} else if(args[0].equals("h") || args[0].equals("home"))
+		{
 			if(sender instanceof EntityPlayerMP)
+				PlayerEvents.homePlayer((EntityPlayerMP) sender, false);
+			else
+				throw new CommandException("You are not a player!");
+		} else if(args[0].equals("tp") && sender.canUseCommand(3, "ic"))
+		{
+			IslandData id = IslandData.getData();
+			
+			if(id.hasIsland(args[1]))
 			{
-				EntityPlayerMP p = (EntityPlayerMP) sender;
-				double x, y, z;
-				p.connection.setPlayerLocation(x = target.getX() + .5, y = p.world.getHeight(target).getY() + 2, z = target.getZ() + .5, 0, 0);
-				p.setPositionAndUpdate(x, y, z);
-				p.setSpawnPoint(p.world.getHeight(target), true);
-				p.fallDistance = 0;
-				p.inventory.clear();
-				p.setHealth(20F);
-				p.getFoodStats().setFoodLevel(20);
-				p.getFoodStats().setFoodSaturationLevel(2);
-				XPUtil.setPlayersExpTo(p, 0);
-			}
+				BlockPos pos = id.getIsland(args[1]);
+				IslandCraft.teleportPlayer((EntityPlayerMP) sender, pos.getX(), server.getWorld(ConfigsIC.islandDim).getHeight(pos).getY() + 2, pos.getZ(), ConfigsIC.islandDim);
+			} else
+				throw new CommandException("Player not found!");
+		} else if(args[0].equals("forcereset") && sender.canUseCommand(4, "ic"))
+		{
+			IslandData id = IslandData.getData();
+			
+			if(id.hasIsland(args[1]))
+			{
+				BlockPos pos = id.getIsland(args[1]);
+				
+				id.islands.remove(args[1]);
+				
+				new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), pos)).start();
+			} else
+				throw new CommandException("Player not found!");
 		}
 	}
 	
@@ -283,12 +355,16 @@ public class CommandIC extends CommandBase
 			vars.add("kick");
 			vars.add("get");
 			vars.add("reset");
+			vars.add("h");
+			vars.add("home");
 			
 			if(sender.canUseCommand(3, "ic"))
+			{
 				vars.add("export");
-			
-			if(sender.canUseCommand(3, "ic"))
 				vars.add("build");
+				vars.add("tp");
+				vars.add("forcereset");
+			}
 			
 			return complete(vars, args[0]);
 		}
@@ -302,6 +378,10 @@ public class CommandIC extends CommandBase
 				return complete(Arrays.asList(server.getPlayerList().getOnlinePlayerNames()), args[1]);
 			} else if(args[1].equals("kick"))
 				return complete(Arrays.asList(server.getPlayerList().getOnlinePlayerNames()), args[1]);
+			else if(args[1].equals("tp") && sender.canUseCommand(3, "ic"))
+				return complete(IslandData.getData().islands.getKeys(), args[1]);
+			else if(args[1].equals("forcereset") && sender.canUseCommand(4, "ic"))
+				return complete(IslandData.getData().islands.getKeys(), args[1]);
 		}
 		
 		return Collections.emptyList();

@@ -5,12 +5,12 @@ author=APengu
 forge_version=14.23.0.2529
 minecraft_version=1.12.2
 mcp=snapshot_20170624
-hc_version=1.9.5.7
+hc_version=1.9.5.8
 
 #Mod info
 mod_id=islands
 mod_id_fancy=IslandCraft
 mod_name=Island Craft
-mod_version=2r
+mod_version=3r
 cf_project=243931
 release_type=beta

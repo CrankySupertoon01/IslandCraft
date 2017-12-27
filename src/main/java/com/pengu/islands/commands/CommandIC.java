@@ -275,12 +275,12 @@ public class CommandIC extends CommandBase
 			
 			BlockPos target = id.getIsland(sender.getName());
 			
-			sender.sendMessage(new TextComponentString("Resetting..."));
+			sender.sendMessage(new TextComponentString(TextFormatting.RED + "Resetting..."));
 			TaskDestroyIsland task = new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), target));
 			
 			task.onFinish = () ->
 			{
-				sender.sendMessage(new TextComponentString("Building..."));
+				sender.sendMessage(new TextComponentString(TextFormatting.YELLOW + "Building..."));
 				
 				File ics = new File("config", InfoIC.MOD_ID + File.separator + "island.ics");
 				
@@ -297,11 +297,10 @@ public class CommandIC extends CommandBase
 				
 				if(sender instanceof EntityPlayerMP)
 				{
+					sender.sendMessage(new TextComponentString(TextFormatting.GREEN + "Teleporting Player (& reseting player info)..."));
+					
 					EntityPlayerMP p = (EntityPlayerMP) sender;
-					double x, y, z;
-					p.connection.setPlayerLocation(x = target.getX() + .5, y = p.world.getHeight(target).getY() + 2, z = target.getZ() + .5, 0, 0);
-					p.setPositionAndUpdate(x, y, z);
-					p.setSpawnPoint(p.world.getHeight(target), true);
+					PlayerEvents.homePlayer(p, true);
 					p.fallDistance = 0;
 					p.inventory.clear();
 					p.setHealth(20F);
@@ -309,9 +308,21 @@ public class CommandIC extends CommandBase
 					p.getFoodStats().setFoodSaturationLevel(2);
 					XPUtil.setPlayersExpTo(p, 0);
 				}
+				
+				sender.sendMessage(new TextComponentString(TextFormatting.DARK_GREEN + "Done! Enjoy your new island!"));
 			};
 			
-			task.start();
+			new Thread(() ->
+			{
+				long ticks = 0;
+				while(task.isAlive())
+				{
+					task.update();
+					++ticks;
+				}
+				sender.sendMessage(new TextComponentString(TextFormatting.RED + "Your old island has been broken in " + ticks + " ticks."));
+				task.onKill();
+			}).start();
 		} else if(args[0].equals("h") || args[0].equals("home"))
 		{
 			if(sender instanceof EntityPlayerMP)
@@ -325,10 +336,10 @@ public class CommandIC extends CommandBase
 			if(id.hasIsland(args[1]))
 			{
 				BlockPos pos = id.getIsland(args[1]);
-				IslandCraft.teleportPlayer((EntityPlayerMP) sender, pos.getX(), server.getWorld(ConfigsIC.islandDim).getHeight(pos).getY() + 2, pos.getZ(), ConfigsIC.islandDim);
+				IslandCraft.teleportPlayer((EntityPlayerMP) sender, pos.getX() + .5, server.getWorld(ConfigsIC.islandDim).getHeight(pos).getY() + 2, pos.getZ() + .5, ConfigsIC.islandDim);
 			} else
 				throw new CommandException("Player not found!");
-		} else if(args[0].equals("forcereset") && sender.canUseCommand(4, "ic"))
+		} else if(args[0].equals("forcereset") && sender.canUseCommand(3, "ic"))
 		{
 			IslandData id = IslandData.getData();
 			
@@ -376,11 +387,11 @@ public class CommandIC extends CommandBase
 				if(pending.containsKey(sender.getName()))
 					return complete(Arrays.asList("confirm+", "deny-"), args[1]);
 				return complete(Arrays.asList(server.getPlayerList().getOnlinePlayerNames()), args[1]);
-			} else if(args[1].equals("kick"))
+			} else if(args[0].equals("kick"))
 				return complete(Arrays.asList(server.getPlayerList().getOnlinePlayerNames()), args[1]);
-			else if(args[1].equals("tp") && sender.canUseCommand(3, "ic"))
+			else if(args[0].equals("tp") && sender.canUseCommand(3, "ic"))
 				return complete(IslandData.getData().islands.getKeys(), args[1]);
-			else if(args[1].equals("forcereset") && sender.canUseCommand(4, "ic"))
+			else if(args[0].equals("forcereset") && sender.canUseCommand(3, "ic"))
 				return complete(IslandData.getData().islands.getKeys(), args[1]);
 		}
 		
@@ -390,9 +401,7 @@ public class CommandIC extends CommandBase
 	private static List<String> complete(List<String> src, String cur)
 	{
 		src = new ArrayList<>(src);
-		for(int i = 0; i < src.size(); ++i)
-			if(!src.get(i).toLowerCase().startsWith(cur.toLowerCase()))
-				src.remove(i);
+		src.removeIf(str -> !str.toLowerCase().startsWith(cur.toLowerCase()));
 		return src;
 	}
 }

@@ -38,12 +38,15 @@ public class PlayerEvents
 	
 	public static void homePlayer(EntityPlayer p, boolean setSpawn)
 	{
-		if(p.world.getWorldType() == IslandCraft.islandWorldType && p.getServer() != null)
+		if(p.world.getWorldType() == IslandCraft.islandWorldType && !p.world.isRemote)
 		{
 			IslandData id = IslandData.getData();
 			String name = p.getGameProfile().getName();
+			
 			boolean first = !id.hasIsland(name);
 			BlockPos island = id.getIsland(name);
+			
+			island = new BlockPos(island.getX(), ConfigsIC.islandY, island.getZ());
 			
 			if(first && p instanceof EntityPlayerMP)
 			{
@@ -54,7 +57,7 @@ public class PlayerEvents
 					NBTTagList list = CompressedStreamTools.readCompressed(fis).getTagList("data", NBT.TAG_COMPOUND);
 					
 					Island isl = new Island(list);
-					isl.build(new WorldLocation(p.getEntityWorld(), p.getPosition()));
+					isl.build(new WorldLocation(p.getEntityWorld(), island));
 				} catch(Throwable err)
 				{
 					err.printStackTrace();

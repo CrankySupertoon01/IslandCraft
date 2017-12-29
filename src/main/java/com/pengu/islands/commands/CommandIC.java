@@ -263,7 +263,10 @@ public class CommandIC extends CommandBase
 			IslandData id = IslandData.getData();
 			
 			if(!id.hasIsland(sender.getName()))
-				throw new CommandException("You don't own an island!");
+			{
+				PlayerEvents.homePlayer((EntityPlayer) sender, true);
+				throw new CommandException("Island created.");
+			}
 			
 			BlockPos local = id.getLocalIsland(sender.getName());
 			
@@ -273,33 +276,24 @@ public class CommandIC extends CommandBase
 			if(users.size() > 1)
 				throw new CommandException("You have allies on your island; you can not reset the island.");
 			
-			BlockPos target = id.getIsland(sender.getName());
-			
-			sender.sendMessage(new TextComponentString(TextFormatting.RED + "Resetting..."));
-			TaskDestroyIsland task = new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), target));
-			
-			task.onFinish = () ->
+			if(id.hasIsland(sender.getName()))
 			{
-				sender.sendMessage(new TextComponentString(TextFormatting.YELLOW + "Building..."));
+				BlockPos pos = id.getIsland(sender.getName());
 				
-				File ics = new File("config", InfoIC.MOD_ID + File.separator + "island.ics");
+				id.islands.remove(sender.getName());
 				
-				try(FileInputStream fis = new FileInputStream(ics))
-				{
-					NBTTagList list = CompressedStreamTools.readCompressed(fis).getTagList("data", NBT.TAG_COMPOUND);
-					
-					Island isl = new Island(list);
-					isl.build(new WorldLocation(server.getWorld(ConfigsIC.islandDim), target));
-				} catch(Throwable err)
-				{
-					err.printStackTrace();
-				}
+				TaskDestroyIsland dest = new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), pos));
 				
-				if(sender instanceof EntityPlayerMP)
+				while(dest.isAlive())
+					dest.update();
+				
+				dest.onKill();
+				
+				if(server.getPlayerList().getPlayerByUsername(sender.getName()) != null)
 				{
 					sender.sendMessage(new TextComponentString(TextFormatting.GREEN + "Teleporting Player (& reseting player info)..."));
 					
-					EntityPlayerMP p = (EntityPlayerMP) sender;
+					EntityPlayerMP p = server.getPlayerList().getPlayerByUsername(sender.getName());
 					PlayerEvents.homePlayer(p, true);
 					p.fallDistance = 0;
 					p.inventory.clear();
@@ -308,21 +302,8 @@ public class CommandIC extends CommandBase
 					p.getFoodStats().setFoodSaturationLevel(2);
 					XPUtil.setPlayersExpTo(p, 0);
 				}
-				
-				sender.sendMessage(new TextComponentString(TextFormatting.DARK_GREEN + "Done! Enjoy your new island!"));
-			};
-			
-			new Thread(() ->
-			{
-				long ticks = 0;
-				while(task.isAlive())
-				{
-					task.update();
-					++ticks;
-				}
-				sender.sendMessage(new TextComponentString(TextFormatting.RED + "Your old island has been broken in " + ticks + " ticks."));
-				task.onKill();
-			}).start();
+			} else
+				throw new CommandException("Island not found!");
 		} else if(args[0].equals("h") || args[0].equals("home"))
 		{
 			if(sender instanceof EntityPlayerMP)
@@ -349,9 +330,28 @@ public class CommandIC extends CommandBase
 				
 				id.islands.remove(args[1]);
 				
-				new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), pos)).start();
+				TaskDestroyIsland dest = new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), pos));
+				
+				while(dest.isAlive())
+					dest.update();
+				
+				dest.onKill();
+				
+				if(server.getPlayerList().getPlayerByUsername(args[1]) != null)
+				{
+					sender.sendMessage(new TextComponentString(TextFormatting.GREEN + "Teleporting Player (& reseting player info)..."));
+					
+					EntityPlayerMP p = server.getPlayerList().getPlayerByUsername(args[1]);
+					PlayerEvents.homePlayer(p, true);
+					p.fallDistance = 0;
+					p.inventory.clear();
+					p.setHealth(20F);
+					p.getFoodStats().setFoodLevel(20);
+					p.getFoodStats().setFoodSaturationLevel(2);
+					XPUtil.setPlayersExpTo(p, 0);
+				}
 			} else
-				throw new CommandException("Player not found!");
+				throw new CommandException("Island not found!");
 		}
 	}
 	

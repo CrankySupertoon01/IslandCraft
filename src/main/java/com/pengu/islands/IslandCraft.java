@@ -67,6 +67,8 @@ public class IslandCraft
 				err.printStackTrace();
 			}
 		}
+		
+		SkyManual.init();
 	}
 	
 	@EventHandler

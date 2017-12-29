@@ -11,6 +11,6 @@ hc_version=1.9.5.8
 mod_id=islands
 mod_id_fancy=IslandCraft
 mod_name=Island Craft
-mod_version=4r
+mod_version=5r
 cf_project=243931
 release_type=release

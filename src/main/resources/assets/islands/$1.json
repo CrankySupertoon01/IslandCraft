@@ -1,0 +1,53 @@
+[
+	{
+		"id": "sapling",
+		"label": "Saplings, again",
+		"shdesc": "The beginning!",
+		"modifiers": [ "special" ],
+		"icon_stack": { "id": "minecraft:sapling" },
+		"color": 0x00FF00,
+		"x": 0,
+		"y": 0,
+		"deps": [],
+		"pages": [
+			{
+				"type": "text",
+				"text": "Saplings are core component of any survival, even on sky island you are going to need them."
+			},
+			{
+				"type": "multiblock",
+				"x_size": 1,
+				"y_size": 1,
+				"z_size": 1,
+				"items": [
+					{ "id": "minecraft:sapling" }
+				]
+			},
+			{
+				"type": "smelting",
+				"in": { "id": "minecraft:log" }
+			}
+		]
+	},
+	{
+		"id": "workbench",
+		"label": "Crafting table",
+		"shdesc": "Mastering crafting!",
+		"modifiers": [ "round" ],
+		"icon_stack": { "id": "minecraft:crafting_table" },
+		"color": 0xAA6600,
+		"x": 2,
+		"y": 0,
+		"deps": [ "sapling" ],
+		"pages": [
+			{
+				"type": "text",
+				"text": "Crafting table allows to expand crafting grid to 3x3 while using it."
+			},
+			{
+				"type": "crafting",
+				"out": { "id": "minecraft:crafting_table" }
+			}
+		]
+	}
+]

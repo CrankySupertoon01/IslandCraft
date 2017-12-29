@@ -67,7 +67,8 @@ public class PlayerEvents
 			if(p instanceof EntityPlayerMP)
 			{
 				double x, y, z;
-				IslandCraft.teleportPlayer((EntityPlayerMP) p, x = island.getX() + .5, y = p.world.getHeight(island).getY() + 2, z = island.getZ() + .5, ConfigsIC.islandDim);
+				p.world.getChunkFromBlockCoords(island);
+				IslandCraft.teleportPlayer((EntityPlayerMP) p, x = island.getX() + .5, y = p.world.getHeight(island).getY(), z = island.getZ() + .5, ConfigsIC.islandDim);
 				if(setSpawn)
 					p.setSpawnChunk(p.world.getHeight(island), false, ConfigsIC.islandDim);
 				p.fallDistance = 0;

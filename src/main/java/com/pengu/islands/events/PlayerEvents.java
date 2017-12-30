@@ -27,7 +27,8 @@ public class PlayerEvents
 	@SubscribeEvent
 	public void playerJoin(PlayerLoggedInEvent e)
 	{
-		homePlayer(e.player, true);
+		if(!IslandData.getData().hasIsland(e.player.getName()))
+			homePlayer(e.player, true);
 	}
 	
 	@SubscribeEvent

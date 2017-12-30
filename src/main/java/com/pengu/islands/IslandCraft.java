@@ -11,6 +11,7 @@ import com.pengu.hammercore.HammerCore.HCAuthor;
 import com.pengu.hammercore.common.utils.BlankTeleporter;
 import com.pengu.hammercore.common.utils.IOUtils;
 import com.pengu.islands.commands.CommandIC;
+import com.pengu.islands.events.WorldEvents;
 import com.pengu.islands.proxy.CommonProxy;
 import com.pengu.islands.world.WorldTypeIslands;
 
@@ -74,13 +75,18 @@ public class IslandCraft
 	@EventHandler
 	public void serverStarting(FMLServerStartingEvent e)
 	{
-		IslandData.data = null;
+		MinecraftServer serv = e.getServer();
+		if(serv != null)
+			WorldEvents.load(serv.getActiveAnvilConverter().getFile(serv.getFolderName(), "islands.json"));
 		e.registerServerCommand(new CommandIC());
 	}
 	
 	@EventHandler
 	public void serverStopping(FMLServerStoppingEvent e)
 	{
+		MinecraftServer serv = FMLCommonHandler.instance().getMinecraftServerInstance();
+		if(serv != null)
+			WorldEvents.save(serv.getActiveAnvilConverter().getFile(serv.getFolderName(), "islands.json"));
 		CommandIC.pending.clear();
 	}
 	

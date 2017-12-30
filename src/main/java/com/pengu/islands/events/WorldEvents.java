@@ -1,39 +1,92 @@
 package com.pengu.islands.events;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 
-import com.pengu.hammercore.annotations.MCFBus;
-import com.pengu.hammercore.event.WorldEventsHC;
+import com.pengu.hammercore.json.JSONArray;
+import com.pengu.hammercore.json.JSONException;
+import com.pengu.hammercore.json.JSONObject;
+import com.pengu.hammercore.json.JSONStringer;
+import com.pengu.hammercore.json.JSONTokener;
+import com.pengu.hammercore.json.io.Jsonable;
 import com.pengu.islands.IslandData;
 import com.pengu.islands.config.ConfigsIC;
 
 import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-@MCFBus
 public class WorldEvents
 {
-	@SubscribeEvent
-	public void save(WorldEventsHC.SaveData e)
+	public static void save(File json)
 	{
-		if(e.getWorld().provider.getDimension() == ConfigsIC.islandDim)
+		StringBuilder str = new StringBuilder();
+		
+		str.append("[\n\t");
+		
+		IslandData id = IslandData.getData();
+		
+		for(String u : id.islands.getKeys())
 		{
-			IslandData id = IslandData.getData();
-			e.additionalData.put("islands", id.serialize());
+			BlockPos pos = id.islands.get(u);
+			
+			str.append("{");
+			str.append("\n\t\t\"user\": \"" + Jsonable.formatInsideString(u) + "\",");
+			str.append("\n\t\t\"x\": " + pos.getX() + ",");
+			str.append("\n\t\t\"z\": " + pos.getZ());
+			str.append("\n\t},\n\t");
+		}
+		
+		if(str.indexOf(",\n\t", str.length() - 3) != -1)
+			str = str.delete(str.length() - 3, str.length());
+		
+		str.append("\n]");
+		
+		byte[] data = str.toString().replaceAll("\n", System.lineSeparator()).getBytes();
+		
+		try
+		{
+			FileOutputStream fos = new FileOutputStream(json);
+			fos.write(data);
+			fos.close();
+		} catch(IOException e)
+		{
+			e.printStackTrace();
 		}
 	}
 	
-	@SubscribeEvent
-	public void load(WorldEventsHC.LoadData e)
+	public static void load(File json)
 	{
-		if(e.getWorld().provider.getDimension() == ConfigsIC.islandDim)
+		if(!json.isFile())
 		{
-			HashMap<String, Long> data = (HashMap<String, Long>) e.additionalData.get("islands");
-			if(data == null)
-				return;
+			System.out.println("Island data file does not exist!");
+			return;
+		}
+		
+		try
+		{
+			JSONArray arr = (JSONArray) new JSONTokener(new String(Files.readAllBytes(json.toPath()))).nextValue();
+			
 			IslandData id = new IslandData();
-			data.keySet().forEach(key -> id.islands.put(key, BlockPos.fromLong(data.get(key))));
+			
+			for(int i = 0; i < arr.length(); ++i)
+			{
+				JSONObject obj = arr.getJSONObject(i);
+				
+				String u = obj.getString("user");
+				BlockPos p = new BlockPos(obj.getInt("x"), 0, obj.getInt("z"));
+				
+				System.out.println("I see " + obj);
+				
+				id.islands.put(u, p);
+			}
+			
 			IslandData.data = id;
+		} catch(JSONException | IOException e)
+		{
+			e.printStackTrace();
 		}
 	}
 }

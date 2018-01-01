@@ -33,6 +33,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.util.text.TextFormatting;
@@ -125,27 +126,36 @@ public class CommandIC extends CommandBase
 			}
 		} else if(args[0].equals("move"))
 		{
-			if(args[1].equals("confirm+"))
+			if(args[1].equals("accept"))
 			{
 				if(pending.containsKey(sender.getName()))
 				{
-					String key = pending.getKey(sender.getName());
-					pending.remove(key);
+					IslandData id = IslandData.getData();
+					
+					BlockPos local = id.getLocalIsland(sender.getName());
+					List<String> users = id.islands.getKeys();
+					users.removeIf(u -> !Objects.equals(id.islands.get(u), local));
+					boolean multiowned = users.size() > 1;
+					
+					String key = pending.get(sender.getName());
+					pending.remove(sender.getName());
+					
 					EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(key);
 					
 					sender.sendMessage(new TextComponentTranslation("islands.requestcomfirmed"));
 					player.sendMessage(new TextComponentTranslation("islands.pconfirm", sender.getName()));
-					
-					IslandData id = IslandData.getData();
 					
 					BlockPos target = id.getIsland(sender.getName());
 					BlockPos destroy = id.getIsland(player.getName());
 					
 					id.islands.put(player.getName(), id.islands.get(sender.getName()));
 					
-					TaskDestroyIsland task = new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), destroy));
-					while(task.isAlive())
-						task.update();
+					if(!multiowned)
+					{
+						TaskDestroyIsland task = new TaskDestroyIsland(new WorldLocation(server.getWorld(ConfigsIC.islandDim), destroy));
+						while(task.isAlive())
+							task.update();
+					}
 					
 					if(!id.hasIsland(sender.getName()))
 					{
@@ -173,16 +183,17 @@ public class CommandIC extends CommandBase
 						p.fallDistance = 0;
 					}
 				} else
-					throw new CommandException("You don't have pending requests.");
-			} else if(args[1].equals("deny-"))
+					throw new CommandException("You don't have pending incoming requests.");
+			} else if(args[1].equals("deny"))
 			{
 				if(pending.containsKey(sender.getName()))
 				{
-					String key = pending.getKey(sender.getName());
-					pending.remove(key);
+					String key = pending.get(sender.getName());
+					pending.remove(sender.getName());
+					
+					EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(key);
 					
 					sender.sendMessage(new TextComponentTranslation("islands.requestcanceled"));
-					EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(key);
 					player.sendMessage(new TextComponentTranslation("islands.pdeny", sender.getName()));
 				} else
 					throw new CommandException("You don't have pending requests.");
@@ -192,13 +203,18 @@ public class CommandIC extends CommandBase
 					throw new CommandException("You can't send move request to yourself!");
 				if(!pending.containsKey(sender.getName()))
 				{
+					IslandData id = IslandData.getData();
+					
+					if(id.getIsland(sender.getName()).equals(id.getIsland(args[0])))
+						th("islands.same").send(sender);
+					
 					EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(args[1]);
 					sender.sendMessage(new TextComponentTranslation("islands.move_to", player.getName()));
 					player.sendMessage(new TextComponentTranslation("islands.move_senttoyou", sender.getName()));
 					
-					pending.put(sender.getName(), player.getName());
+					pending.put(player.getName(), sender.getName());
 				} else
-					throw new CommandException("You have pending incoming request.");
+					throw new CommandException("You don't have pending incoming requests.");
 			} else
 				throw new CommandException("Player not found!");
 		} else if(args[0].equals("kick"))
@@ -299,7 +315,6 @@ public class CommandIC extends CommandBase
 					p.inventory.clear();
 					p.setHealth(20F);
 					p.getFoodStats().setFoodLevel(20);
-					p.getFoodStats().setFoodSaturationLevel(2);
 					XPUtil.setPlayersExpTo(p, 0);
 				}
 			} else
@@ -347,11 +362,35 @@ public class CommandIC extends CommandBase
 					p.inventory.clear();
 					p.setHealth(20F);
 					p.getFoodStats().setFoodLevel(20);
-					p.getFoodStats().setFoodSaturationLevel(2);
 					XPUtil.setPlayersExpTo(p, 0);
 				}
 			} else
-				throw new CommandException("Island not found!");
+				th("islands.404").send(sender);
+		} else if(args[0].equals("tp") && sender.canUseCommand(3, "ic"))
+		{
+			IslandData id = IslandData.getData();
+			
+			if(id.hasIsland(args[1]))
+			{
+				BlockPos pos = id.getIsland(args[1]);
+				IslandCraft.teleportPlayer((EntityPlayerMP) sender, pos.getX() + .5, server.getWorld(ConfigsIC.islandDim).getHeight(pos).getY() + 2, pos.getZ() + .5, ConfigsIC.islandDim);
+			} else
+				throw new CommandException("Player not found!");
+		} else if(args[0].equals("leave"))
+		{
+			IslandData id = IslandData.getData();
+			
+			BlockPos local = id.getLocalIsland(sender.getName());
+			List<String> users = id.islands.getKeys();
+			users.removeIf(u -> !Objects.equals(id.islands.get(u), local));
+			boolean multiowned = users.size() > 1;
+			
+			if(multiowned)
+			{
+				id.islands.remove(sender.getName());
+				PlayerEvents.homePlayer((EntityPlayer) sender, true);
+			} else
+				th("islands.leave.err.alone").send(sender);
 		}
 	}
 	
@@ -364,6 +403,7 @@ public class CommandIC extends CommandBase
 			
 			vars.add("move");
 			vars.add("kick");
+			vars.add("leave");
 			vars.add("get");
 			vars.add("reset");
 			vars.add("h");
@@ -385,7 +425,7 @@ public class CommandIC extends CommandBase
 			if(args[0].equals("move"))
 			{
 				if(pending.containsKey(sender.getName()))
-					return complete(Arrays.asList("confirm+", "deny-"), args[1]);
+					return complete(Arrays.asList("accept", "deny"), args[1]);
 				return complete(Arrays.asList(server.getPlayerList().getOnlinePlayerNames()), args[1]);
 			} else if(args[0].equals("kick"))
 				return complete(Arrays.asList(server.getPlayerList().getOnlinePlayerNames()), args[1]);
@@ -403,5 +443,26 @@ public class CommandIC extends CommandBase
 		src = new ArrayList<>(src);
 		src.removeIf(str -> !str.toLowerCase().startsWith(cur.toLowerCase()));
 		return src;
+	}
+	
+	public PollableThrowable<ITextComponent> th(String i, Object... args)
+	{
+		return () -> new TextComponentTranslation(i, args);
+	}
+	
+	private static interface PollableThrowable<O extends ITextComponent>
+	{
+		O poll();
+		
+		default void send(ICommandSender s) throws CommandException
+		{
+			s.sendMessage(poll());
+			error();
+		}
+		
+		default void error() throws CommandException
+		{
+			throw new CommandException("Error!");
+		}
 	}
 }

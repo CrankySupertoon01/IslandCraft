@@ -20,6 +20,7 @@ import com.pengu.islands.IslandCraft;
 import com.pengu.islands.IslandData;
 import com.pengu.islands.config.ConfigsIC;
 import com.pengu.islands.events.PlayerEvents;
+import com.pengu.islands.events.WorldEvents;
 import com.pengu.islands.tasks.TaskDestroyIsland;
 import com.pengu.islands.world.Island;
 
@@ -391,6 +392,17 @@ public class CommandIC extends CommandBase
 				PlayerEvents.homePlayer((EntityPlayer) sender, true);
 			} else
 				th("islands.leave.err.alone").send(sender);
+		} else if(args[0].equals("save") && sender.canUseCommand(3, "ic"))
+		{
+			WorldEvents.save(server.getActiveAnvilConverter().getFile(server.getFolderName(), "islands.json"));
+		} else if(args[0].equals("load") && sender.canUseCommand(3, "ic"))
+		{
+			WorldEvents.load(server.getActiveAnvilConverter().getFile(server.getFolderName(), "islands.json"));
+		} else if(args[0].equals("list") && sender.canUseCommand(3, "ic"))
+		{
+			List<String> str = IslandData.getData().islands.getKeys();
+			for(String i : str)
+				sender.sendMessage(new TextComponentString(IslandData.getData().getIsland(i) + " < " + IslandData.getData().islands.get(i).toString()));
 		}
 	}
 	
@@ -415,6 +427,9 @@ public class CommandIC extends CommandBase
 				vars.add("build");
 				vars.add("tp");
 				vars.add("forcereset");
+				vars.add("save");
+				vars.add("load");
+				vars.add("list");
 			}
 			
 			return complete(vars, args[0]);

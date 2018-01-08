@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.pengu.hammercore.utils.IndexedMap;
 import com.pengu.islands.config.ConfigsIC;
@@ -12,9 +11,7 @@ import com.pengu.islands.config.ConfigsIC;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants.NBT;
-import net.minecraftforge.fml.relauncher.Side;
 
 public class IslandData
 {

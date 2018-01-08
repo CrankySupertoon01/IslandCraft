@@ -16,9 +16,12 @@ out
 # gradle
 build
 .gradle
+gradle.properties
+changelog.html
 
 # other
 eclipse
 run
 libs
 *.rar
+*.jks

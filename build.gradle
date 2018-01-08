@@ -5,6 +5,10 @@ buildscript {
             name = "forge"
             url = "http://files.minecraftforge.net/maven"
         }
+		maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
@@ -13,6 +17,7 @@ buildscript {
 
 plugins {
     id 'com.matthewprenger.cursegradle' version '1.0.8'
+	id 'se.bjurr.gitchangelog.git-changelog-gradle-plugin' version '1.50'
 }
 
 apply plugin: 'net.minecraftforge.gradle.forge'
@@ -102,7 +107,7 @@ curseforge {
 	project {
 		id = "${config.cf_project}"
 		changelogType = 'html'
-		changelog = ""
+		changelog = file('changelog.html')
 		releaseType = "${config.release_type}"
 		addGameVersion "${config.minecraft_version}"
 		mainArtifact(jar) {
@@ -118,4 +123,73 @@ curseforge {
             requiredLibrary 'Hammer-Core'
         }
 	}
+}
+
+
+
+task signJar(type: SignJar, dependsOn: reobfJar) {
+    onlyIf {
+        project.hasProperty('keyStore')
+    }
+    keyStore = project.findProperty('keyStore')
+    alias = project.findProperty('keyStoreAlias')
+    storePass = project.findProperty('keyStorePass')
+    keyPass = project.findProperty('keyStoreKeyPass')
+    inputFile = jar.archivePath
+    outputFile = jar.archivePath
+}
+
+task signDeobfJar(type: SignJar, dependsOn: deobfJar) {
+    onlyIf {
+        project.hasProperty('keyStore')
+    }
+    keyStore = project.findProperty('keyStore')
+    alias = project.findProperty('keyStoreAlias')
+    storePass = project.findProperty('keyStorePass')
+    keyPass = project.findProperty('keyStoreKeyPass')
+    inputFile = deobfJar.archivePath
+    outputFile = deobfJar.archivePath
+}
+
+task signSrcJar(type: SignJar, dependsOn: srcJar) {
+    onlyIf {
+        project.hasProperty('keyStore')
+    }
+    keyStore = project.findProperty('keyStore')
+    alias = project.findProperty('keyStoreAlias')
+    storePass = project.findProperty('keyStorePass')
+    keyPass = project.findProperty('keyStoreKeyPass')
+    inputFile = srcJar.archivePath
+    outputFile = srcJar.archivePath
+}
+
+task makeChangelog(type: se.bjurr.gitchangelog.plugin.gradle.GitChangelogTask) {
+    file = new File("changelog.html")
+    untaggedName = "Version ${project.version}"
+    fromCommit = startGitRev
+    toRef =  "HEAD"
+    gitHubIssuePattern = "nonada123";
+    templateContent = """
+{{#tags}}
+<h1>Changes:</h1>
+  <ul>
+    {{#commits}}
+    <li> <a href="https://github.com/APengu/IslandCraft/commit/{{hash}}" target=_blank> {{{message}}}</a>
+</li>
+    {{/commits}}
+  </ul>
+{{/tags}}
+"""
+}
+
+build.dependsOn signJar
+build.dependsOn signDeobfJar
+build.dependsOn signSrcJar
+tasks.build.dependsOn makeChangelog
+
+afterEvaluate {
+	tasks["curseforge${config.cf_project}"].dependsOn.add(signJar)
+	tasks["curseforge${config.cf_project}"].dependsOn.add(signDeobfJar)
+	tasks["curseforge${config.cf_project}"].dependsOn.add(signSrcJar)
+	tasks["curseforge${config.cf_project}"].dependsOn.add(makeChangelog)
 }

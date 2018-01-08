@@ -4,17 +4,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
-import java.util.HashMap;
 
 import com.pengu.hammercore.json.JSONArray;
 import com.pengu.hammercore.json.JSONException;
 import com.pengu.hammercore.json.JSONObject;
-import com.pengu.hammercore.json.JSONStringer;
 import com.pengu.hammercore.json.JSONTokener;
 import com.pengu.hammercore.json.io.Jsonable;
 import com.pengu.islands.IslandData;
-import com.pengu.islands.config.ConfigsIC;
 
 import net.minecraft.util.math.BlockPos;
 
@@ -69,7 +65,7 @@ public class WorldEvents
 		{
 			JSONArray arr = (JSONArray) new JSONTokener(new String(Files.readAllBytes(json.toPath()))).nextValue();
 			
-			IslandData id = new IslandData();
+			IslandData id = IslandData.data == null ? new IslandData() : IslandData.data;
 			
 			for(int i = 0; i < arr.length(); ++i)
 			{

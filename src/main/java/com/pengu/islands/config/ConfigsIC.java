@@ -7,6 +7,9 @@ import com.pengu.hammercore.cfg.iConfigReloadListener;
 import com.pengu.hammercore.cfg.fields.ModConfigPropertyInt;
 import com.pengu.islands.InfoIC;
 
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.common.config.Property;
+
 @HCModConfigurations(modid = InfoIC.MOD_ID)
 public class ConfigsIC implements iConfigReloadListener
 {
@@ -19,6 +22,8 @@ public class ConfigsIC implements iConfigReloadListener
 	@ModConfigPropertyInt(name = "Dimension", category = "Island Properties", comment = "In what dimension should islands spawn?", defaultValue = 0, min = Integer.MIN_VALUE, max = Integer.MAX_VALUE)
 	public static int islandDim;
 	
+	public static int[] voidWorlds;
+	
 	@Override
 	public File getSuggestedConfigurationFile()
 	{
@@ -26,5 +31,12 @@ public class ConfigsIC implements iConfigReloadListener
 		if(!cfg.isDirectory())
 			cfg.mkdirs();
 		return new File(cfg, "config.txt");
+	}
+	
+	@Override
+	public void reloadCustom(Configuration cfgs)
+	{
+		Property prop = cfgs.get("World Gen", "Void Worlds", new int[] { islandDim }, "What worlds should generate as 'void' worlds?");
+		voidWorlds = prop.getIntList();
 	}
 }

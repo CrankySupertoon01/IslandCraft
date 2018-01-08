@@ -3,24 +3,33 @@ package com.pengu.islands;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.Random;
 
 import com.pengu.hammercore.HammerCore;
-import com.pengu.hammercore.HammerCore.HCAuthor;
 import com.pengu.hammercore.common.utils.BlankTeleporter;
 import com.pengu.hammercore.common.utils.IOUtils;
+import com.pengu.hammercore.utils.ChunkUtils;
+import com.pengu.hammercore.world.gen.WorldRetroGen;
 import com.pengu.islands.commands.CommandIC;
+import com.pengu.islands.config.ConfigsIC;
 import com.pengu.islands.events.WorldEvents;
 import com.pengu.islands.proxy.CommonProxy;
 import com.pengu.islands.world.WorldTypeIslands;
 
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.init.Blocks;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Teleporter;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.IChunkProvider;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import net.minecraft.world.gen.IChunkGenerator;
 import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.fml.common.IWorldGenerator;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
@@ -70,6 +79,29 @@ public class IslandCraft
 		}
 		
 		SkyManual.init();
+		
+		WorldRetroGen.addWorldGenerator(new IWorldGenerator()
+		{
+			@Override
+			public void generate(Random random, int chunkX, int chunkZ, World world, IChunkGenerator chunkGenerator, IChunkProvider chunkProvider)
+			{
+				boolean cnt = false;
+				for(int i : ConfigsIC.voidWorlds)
+					if(i == world.provider.getDimension())
+					{
+						cnt = true;
+						break;
+					}
+				Chunk c = world.getChunkFromChunkCoords(chunkX, chunkZ);
+				if(world.getWorldType() == islandWorldType && ConfigsIC.islandDim != world.provider.getDimension() && cnt)
+					for(int y = 0; y < 256; ++y)
+						for(int x = 0; x < 16; ++x)
+							for(int z = 0; z < 16; ++z)
+							{
+								c.setBlockState(new BlockPos(x, y, z), Blocks.AIR.getDefaultState());
+							}
+			}
+		});
 	}
 	
 	@EventHandler
@@ -86,7 +118,10 @@ public class IslandCraft
 	{
 		MinecraftServer serv = FMLCommonHandler.instance().getMinecraftServerInstance();
 		if(serv != null)
+		{
 			WorldEvents.save(serv.getActiveAnvilConverter().getFile(serv.getFolderName(), "islands.json"));
+			IslandData.data = null;
+		}
 		CommandIC.pending.clear();
 	}
 	
@@ -123,6 +158,6 @@ public class IslandCraft
 		
 		player.connection.setPlayerLocation(x, y, z, player.rotationYaw, player.rotationPitch);
 		player.addExperienceLevel(0);
-		player.fallDistance = 0.0F;
+		player.fallDistance = 0F;
 	}
 }
